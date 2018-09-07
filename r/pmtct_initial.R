@@ -31,8 +31,13 @@ map <- tibble::tribble(
   ~Indicator,                  ~indicator_short,
   "PMTCT_ART",           "PMTCT Patients on ART",
   "PMTCT_EID",  "At-Risk Infants Tested for HIV",
-  "PMTCT_STAT", "ANC Clients who know HIV Status"
-)
+  "PMTCT_STAT", "ANC Clients who know HIV Status",
+  "HTS_TST_POS",  "HIV Tested Positive",
+  "HTS_TST",  "HIV Testing and Counseling Services",
+  "OVC_SERV",  "OVC Prevention Services",
+  "TX_CURR",  "Patients Currently Receiving ART",
+  "TX_NEW",  "Patients Newly Receiving ART"
+  )
 
 ## import and filtering MSD to relelvent indicators and reshaping
 
@@ -67,8 +72,9 @@ old <- read_csv(file.path(old_data, "Country and Regional Targets_Results 2004-2
 pmtct <- right_join(old, map, by = "indicator_short") %>% 
   select(-indicator_short, -Bundle) %>% 
   rename_all(~tolower(.)) %>%
-  bind_rows(mer) %>% 
-  write_csv(file.path(results_path, "PMTCT_data.csv", na=""))
+  bind_rows(mer) %>%
+  select(operatingunit, year, indicator, results, targets) %>% 
+  write_csv(file.path(results_path, "PMTCT_data.csv"), na="")
 
 
 
