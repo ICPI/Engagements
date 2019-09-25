@@ -4,11 +4,8 @@ memory.limit(size=1000000)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ============= Program Details ~~~~~~~====================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## Program for created Peds dataset
+#
 #   Programmer: Imran Mujawar
-#   Date started: 10/25/2018
-#   Date updated: 06/19/2019
-#   Program: Creates dataset for Peds tool
 #           
 # ---------------------------------------------------------------
 
