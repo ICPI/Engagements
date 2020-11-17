@@ -142,15 +142,18 @@ txcurr28proxy<-snapshot_df %>%
 # EXPORT FINAL DATASET ------------------------------------------------------------------
  
 write_tsv(merge_df, file.path(here("Dataout"),filename1), na = "")
+
+# INDICATOR Rename KEY ------------------------------------------------------------------- 
+indref<-merge_df %>% 
+   gather(indicator,val,colnames(select_if(., (is.numeric)))) %>% 
+   mutate(org_indicator = case_when(mon_yr < "2020-06" & indicator == "TX_CURR_28_proxy" ~ "TX_CURR_28",
+                                     mon_yr < "2020-06" & indicator == "NET_NEW_proxy" ~ "NET_NEW",
+                                    mon_yr < "2020-10" & indicator == "HTS_TST_POS_fac" ~ "HTS_TST_POS", TRUE~ indicator)) %>% 
+  select(c(Facility, MechanismID, mon_yr, indicator, org_indicator)) %>% 
+  distinct(indicator, org_indicator)
  
 # CLEAR GLOBAL ENVIRONMENT --------------------------------------------------------------
 rm(list=ls())
 
- # INDICATOR Rename KEY ------------------------------------------------------------------- 
-indref<-merged_df %>% #don't see merged_df, esp after global is cleared?
-  select(c(Facility, MechanismID, mon_yr, indicator, new_indicator)) %>% 
-  distinct(indicator, new_indicator)
-
- write_tsv(indref, file.path(here("Dataout"),"indicatorKey.txt",na=""))
 
 
