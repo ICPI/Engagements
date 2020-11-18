@@ -33,7 +33,10 @@ df_base<-raw_df %>%
                                 
 
 df_snapshot<-df_base%>%
-  filter(indicator %in% c("TX_CURR_28", "EARLYMISSED", "LATEMISSED"), !is.na(val)) %>% 
+  filter(indicator %in% c("TX_CURR_28", "EARLYMISSED","LATEMISSED"), !is.na(val)) %>% 
+  spread(indicator,val) %>% 
+  filter(!is.na(TX_CURR_28)) %>%
+  gather(indicator,val,EARLYMISSED:TX_CURR_28) %>% 
   group_by(mon_yr,Facility,MechanismID) %>% 
   filter(Week_End==max(Week_End)) %>% 
   ungroup() %>% 
