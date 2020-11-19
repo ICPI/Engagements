@@ -38,12 +38,13 @@ raw_df<-here("Data",raw_files) %>%
   map(~ read_xlsx(.x, sheet = which(str_detect(excel_sheets(.x), "Dummy Data"))))%>% #update sheet name when real is received
   reduce(bind_rows)
 
-old_df<-read_tsv(here("Data/Historical", old_file), col_names = T,
+old_df<-read_tsv("Data/Historical/historic_siyenza_2020-11-18.txt", col_names = T,
                  col_types = c(
                    HTS_TST_POS_fac = "d",
                    TPT_NEW = "d",
                    TX_NEW = "d")) %>%
   mutate(MechanismID=as.character(MechanismID)) %>%
+  rename(Latemissed = LateMissed) %>% 
   gather(indicator,val,colnames(select_if(., (is.numeric)))) %>% 
   filter(mon_yr < "2020-10")
 
@@ -93,45 +94,42 @@ rem_ind<-base_df %>%
 
    ##### CALCULATE HISTORICAL NET_NEW  
  netnew28<- snapshot_df %>% 
-     filter(indicator %in% c("TX_CURR_28")) %>%
-    filter(!is.na(val)) %>%  
-    arrange(Facility, mon_yr) %>% 
-    mutate(net_new= (val - lag(val, default = 0, order_by = Facility))) %>% 
-    gather(indicator, val, "net_new") %>% 
-    filter(mon_yr < "2020-07") %>% 
-    mutate(new_indicator= "NET_NEW_proxy") %>%
-   select(-indicator) %>% 
-    spread(new_indicator, val)
+  filter(indicator %in% c("TX_CURR_28")) %>%
+  filter(!is.na(val)) %>%  
+  arrange(Facility, mon_yr) %>% 
+  mutate(net_new= case_when(Siyenza_StartDate == date("2019-08-01") & mon_yr=="2019-08" ~ 0,
+                            Siyenza_StartDate == date("2019-03-01") & mon_yr == "2019-03" ~ 0, 
+                            TRUE ~(val - lag(val, default = 0, order_by = Facility))))%>% 
+  gather(indicator, val, "net_new") %>% 
+  filter(mon_yr < "2020-07") %>% 
+  spread(indicator, val) %>% 
+  rename(NET_NEW_proxy = net_new) 
  
  ##### RENAME HISTORICAL TX_CURR_28 'TX_CURR_28_proxy'
  txcurr28<- snapshot_df %>% 
-   filter(indicator %in% c("TX_CURR_28")) %>%
-   mutate(new_indicator= "TX_CURR_28_proxy") %>% 
-   select(-indicator) %>% 
-   spread(new_indicator, val) %>% 
-   mutate(Latemissed = 0,
-          TX_CURR_90 = 0) 
+  filter(indicator %in% c("TX_CURR_28", "Latemissed")) %>%
+  spread(indicator, val) %>% 
+  filter(mon_yr < "2020-07") %>% 
+  rename(TX_CURR_28_proxy = TX_CURR_28) %>% 
+  arrange(Facility, mon_yr)
    
  
  ##### COMBINE Historical TX_CURR_28 & NET_ NEW
- htx<-left_join(txcurr28, netnew28) %>% 
-   select(1:12,14,16,13,15)
+ htx<-full_join(txcurr28, netnew28) %>% 
+  select(1:13,15,14)
     
 ##### CALCULATE NEW TX_CURR_28_proxy   
 txcurr28proxy<-snapshot_df %>% 
-    filter(indicator %in% c("TX_CURR_90", "Latemissed")) %>% 
-    spread(indicator, val) %>% 
-    arrange(Facility, mon_yr) %>% 
-    filter(FundingAgency == "HHS/CDC") %>% 
-    mutate(TX_CURR_28_proxy = TX_CURR_90 - Latemissed)
-   
- txcurr28proxy<-txcurr28proxy %>% 
-    mutate(NET_NEW_proxy = TX_CURR_28_proxy - lag(TX_CURR_28_proxy, default=0, order_by = Facility)) %>% 
-    gather(indicator,val,colnames(select_if(., (is.numeric)))) %>% 
-    mutate(new_indicator= indicator) %>% 
-    filter(mon_yr > "2020-06") %>% 
-   select(-indicator) %>% 
-   spread(new_indicator, val)
+  filter(indicator %in% c("TX_CURR_90", "Latemissed")) %>% 
+  spread(indicator, val) %>% 
+  arrange(Facility, mon_yr) %>% 
+  mutate(TX_CURR_28_proxy = TX_CURR_90 - Latemissed)
+
+txcurr28proxy<-txcurr28proxy %>% 
+  mutate(NET_NEW_proxy = TX_CURR_28_proxy - lag(TX_CURR_28_proxy, default=0, order_by = Facility)) %>% 
+  gather(indicator,val,colnames(select_if(., (is.numeric)))) %>% 
+  filter(mon_yr > "2020-06") %>% 
+  spread(indicator, val)
    
 # CREATE FINAL DATASET -------------------------------------------------------------------
  tx_df<-bind_rows(htx, txcurr28proxy)
