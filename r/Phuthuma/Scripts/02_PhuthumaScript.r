@@ -178,6 +178,9 @@ mutate(nyear = case_when(mon %in% c("10", "11", "12") ~ nyear %m+% years(1),
                                                "wc City of Cape Town Metropolitan Municipality") ~ "Metro",
                                    TRUE ~ "Non-Metro"))  
 
+merge_df3<-merge_df3 %>% 
+  mutate(tested_fac = case_when(tested_fac == "Inf" ~ 0, TRUE ~ tested_fac))
+
 # EXPORT FINAL DATASET TO OUTPUTS FOLDER ------------------------------------------------------------------
 
 write_tsv(merge_df3, file.path(here("outputs"),filename1), na = "")
