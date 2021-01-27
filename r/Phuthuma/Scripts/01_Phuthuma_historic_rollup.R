@@ -135,8 +135,7 @@ date_ref1<-date_df %>%
 final1<-left_join(final, date_ref1) %>% 
 filter(mon_yr < "2020-10", !is.na(nWeek_End)) %>%
   rename(Week_End = nWeek_End,
-         Week_Start = nWeek_Start) %>% 
-  mutate(tested)
+         Week_Start = nWeek_Start)
   
   
 
