@@ -41,7 +41,7 @@ raw_df<-here("Data",raw_files) %>%
   reduce(bind_rows)
   
 
-old_df<-read_tsv("Data/Last Month/prev_InteragencyDash_2021-01-19.txt", col_names = T, #Change the file name each time you run to last month's data file
+old_df<-read_tsv("Data/Historical/historic_siyenza_2021-01-27.txt", col_names = T, #Change the file name each time you run to last month's data file
                  col_types = c(
                    HTS_TST_POS_fac = "d",
                    TPT_NEW = "d",
@@ -63,13 +63,13 @@ raw_base<-raw_df %>%
   arrange(Facility, mon_yr) %>% 
   mutate(TX_CURR_28_proxy = case_when(is.na(Latemissed) ~ TX_CURR_90,
                                       TRUE ~ (TX_CURR_90 - Latemissed))) %>% 
-  #filter(mon_yr == c("2020-11", "2020-10")) %>%  #CHANGE TO 
+  #filter(mon_yr == curr_mon) %>%  #CHANGE TO 
   gather(indicator,val,colnames(select_if(., (is.numeric)))) %>% 
   select(c(1:9, 12,10,11,13,14)) 
   
 # MERGE Historical and NEW MONTHLY DATA-----------------------------------------------------
 
-base_df<-bind_rows(raw_base,old_df) 
+base_df<-bind_rows(raw_base,old_df)
 
 
 # YIELD, PROXY LINKAGE, TEST COVERAGE & TPT INITIATION DATA CALC ----------------------------
@@ -118,7 +118,7 @@ snapshot_df<-base_df %>%
 nnproxy<-snapshot_df %>%
   select(-c("Latemissed", "TX_CURR_90")) %>% 
   filter(!is.na(TX_CURR_28_proxy)) %>% 
-  arrange(Facility, mon_yr)%>% 
+  arrange(Facility, Week_End, mon_yr)%>% 
   filter(mon_yr > "2020-04") %>% 
   mutate(NET_NEW_proxy = TX_CURR_28_proxy - lag(TX_CURR_28_proxy, default=0, order_by = Facility)) %>% 
   gather(indicator,val,colnames(select_if(., (is.numeric)))) %>% 
@@ -176,11 +176,15 @@ mutate(nyear = case_when(mon %in% c("10", "11", "12") ~ nyear %m+% years(1),
                                                "kz eThekwini Metropolitan Municipality",
                                                "gp Ekurhuleni Metropolitan Municipality",
                                                "wc City of Cape Town Metropolitan Municipality") ~ "Metro",
-                                   TRUE ~ "Non-Metro"))  
-
-merge_df3<-merge_df3 %>% 
-  mutate(tested_fac = case_when(tested_fac == "Inf" ~ 0, TRUE ~ tested_fac))
-
+                                   TRUE ~ "Non-Metro"),
+         week_count = as.double(difftime(lubridate::ymd(Week_End),
+                                        lubridate::ymd(Week_Start),
+                                        units = "weeks")),
+         PrimePartner = case_when(str_detect(PrimePartner, "Wits|WITS") ~ paste(PrimePartner, FundingAgency, sep="_"),
+                                  TRUE ~ PrimePartner)) %>% 
+  mutate(week_count = round(week_count),
+         tested_fac = case_when(tested_fac=="Inf" ~0,
+                                TRUE ~ tested_fac)) 
 # EXPORT FINAL DATASET TO OUTPUTS FOLDER ------------------------------------------------------------------
 
 write_tsv(merge_df3, file.path(here("outputs"),filename1), na = "")
