@@ -1,7 +1,7 @@
 ##########################################################################################################
 ###################### PHUTHUMA R Script for Dashboard Population ########################################
 ###################### Developed by: Gina Safarty, Yaa Obeng ###########################################
-paste(Sys.Date()) # Last Updated: Jan. 15, 2021
+paste(Sys.Date()) # Last Updated: Feb. 16, 2021
 
 
 #load packages
@@ -49,7 +49,7 @@ old_df<-read_tsv("Data/Historical/historic_siyenza_2021-01-27.txt", col_names = 
   mutate(MechanismID=as.character(MechanismID)) %>%
   rename(Latemissed = LateMissed) %>% 
   gather(indicator,val,colnames(select_if(., (is.numeric)))) %>% 
-  filter(mon_yr < "2020-10") 
+  filter(mon_yr < "2020-11") 
 
 # PROCESS NEW MONTHLY DATA-----------------------------------------------------------------
 
@@ -76,8 +76,19 @@ base_df<-bind_rows(raw_base,old_df)
 
 numden_df<-base_df %>% 
   filter(indicator %in% numden_ind) %>% 
-  group_by(Facility, mon_yr) %>% 
-  spread(indicator, val) %>% 
+  group_by(Facility, mon_yr)%>% 
+  spread(indicator, val) %>%
+  arrange(Facility, mon_yr) %>% 
+  group_by(Facility) %>% 
+  mutate(cum_Headcount = cumsum(coalesce(Headcount, 0)) + Headcount*0,
+         cum_HTS_TST_POS_fac = cumsum(coalesce(HTS_TST_POS_fac, 0)) + HTS_TST_POS_fac*0,
+         cum_HTS_TST_com = cumsum(coalesce(HTS_TST_com, 0)) + HTS_TST_com*0,
+         cum_HTS_TST_fac = cumsum(coalesce(HTS_TST_fac, 0)) + HTS_TST_fac*0,
+         cum_HTS_TST_POS_com = cumsum(coalesce(HTS_TST_POS_com, 0)) + HTS_TST_POS_com*0,
+         cum_Index_contacts_pos = cumsum(coalesce(Index_contacts_pos, 0)) + Index_contacts_pos*0,
+         cum_Index_contacts_tested = cumsum(coalesce(Index_contacts_tested,0)) + Index_contacts_tested*0,
+         cum_TPT_NEW = cumsum(coalesce(TPT_NEW,0)) + TPT_NEW*0,
+         cum_TX_NEW = cumsum(coalesce(TX_NEW,0)) + TX_NEW*0) %>% 
   mutate(yield_fac = case_when(HTS_TST_fac > 0 ~ (HTS_TST_POS_fac/HTS_TST_fac),TRUE ~ 0),
          tested_fac = case_when(HTS_TST_fac > 0 ~ (HTS_TST_fac/Headcount), TRUE ~ 0),
          yield_com = case_when (HTS_TST_com >0 ~ (HTS_TST_POS_com/ HTS_TST_com), TRUE ~ 0),
@@ -90,7 +101,8 @@ numden_df<-base_df %>%
   select(-indicator) %>% 
   spread(new_indicator, val) %>% 
   select(-c(FundingAgency:Community)) %>% 
-  arrange(Facility, mon_yr)
+  arrange(Facility, mon_yr) %>% 
+  select(1:6,16:30, 7:15)
 
 # NON-CALCULATION INDICATORS----------------------------------------------------------
 
@@ -128,12 +140,14 @@ nnproxy<-snapshot_df %>%
   filter(mon_yr > "2020-06")
 
 # CREATE SNAPSHOT DATASET -------------------------------------------------------------------  
-  tx<- rem_ind %>% 
+tx<- rem_ind %>% 
     select(1:12, 21) %>% 
     filter(mon_yr < "2020-10")
 
 tx<-bind_rows(tx,nnproxy) %>% 
-  arrange(Facility, mon_yr)
+  arrange(Facility, mon_yr) %>%
+  group_by(Facility) %>% 
+  mutate(cum_NET_NEW_proxy = cumsum(coalesce(NET_NEW_proxy, 0)) + NET_NEW_proxy*0)
 
 # CREATE FINAL DATASET -------------------------------------------------------------------
 merge_df<-left_join(rem_ind1,numden_df) %>% 
